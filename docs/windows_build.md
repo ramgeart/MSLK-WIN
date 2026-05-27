@@ -1,7 +1,7 @@
 # Windows wheel builds
 
 MSLK-WIN is a Windows-focused fork. The first validation target is building local
-CPU and CUDA wheels on Windows with Python 3.11.
+CPU and CUDA wheels on Windows with Python 3.11 or 3.12.
 
 ## Local prerequisites
 

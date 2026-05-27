@@ -14,10 +14,14 @@ primitives for GenAI training and inference.
 pip install mslk --index-url https://download.pytorch.org/whl/cu130
 # Install MSLK for ROCm
 pip install mslk --index-url https://download.pytorch.org/whl/rocm7.1/
+# Install MSLK for CPU (Windows and Linux)
+pip install mslk --index-url https://download.pytorch.org/whl/cpu
 # Install a nightly CUDA version
 pip install --pre mslk --index-url https://download.pytorch.org/whl/nightly/cu130
 # Install a nightly ROCm version
 pip install --pre mslk --index-url https://download.pytorch.org/whl/nightly/rocm7.1/
+# Install a nightly CPU version
+pip install --pre mslk --index-url https://download.pytorch.org/whl/nightly/cpu
 ```
 
 ## Release Compatibility Table
@@ -46,6 +50,18 @@ python bench/conv/conv_bench.py
 pytest test/gemm/gemm_test.py
 pytest test/quantize/fp8_quantize_correctness_test.py
 pytest test/conv/conv_test.py
+```
+
+## **Windows CPU Wheel**
+
+Windows CPU wheels are supported and verified on Python 3.11 and 3.12. See
+[Windows wheel builds](docs/windows_build.md) for full build instructions.
+
+```powershell
+python -m pip install --upgrade pip setuptools wheel build
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+python setup.py --build-variant cpu bdist_wheel
 ```
 
 ## **Build From Source**
