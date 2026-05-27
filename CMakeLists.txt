@@ -106,6 +106,9 @@ project(
 # AVX Flags Setup - must be set AFTER project declaration
 include(${CMAKEMODULES}/FindAVX.cmake)
 
+# Python headers are required by C++ sources that include torch/extension.h.
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+
 # PyTorch Dependencies Setup
 include(${CMAKEMODULES}/PyTorchSetup.cmake)
 
@@ -131,6 +134,7 @@ set(mslk_include_directories
   ${MSLK}/csrc/attention/ck/fmha/hip_fmha
   # PyTorch
   ${TORCH_INCLUDE_DIRS}
+  ${Python_INCLUDE_DIRS}
   # Third-party
   ${THIRDPARTY}/cutlass/include
   ${THIRDPARTY}/cutlass/tools/util/include
