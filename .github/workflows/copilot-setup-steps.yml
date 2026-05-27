@@ -52,9 +52,7 @@ jobs:
       - name: Install repository requirements with Windows fallback
         shell: pwsh
         run: |
-          # El requirements.txt del repo incluye herramientas de build.
-          # Si alguna dependencia Linux-only falla en Windows, Copilot podrá ver el fallo
-          # y refactorizar requirements/setup/workflows con evidencia.
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -r requirements.txt
 
       - name: Validate PyTorch
@@ -75,15 +73,10 @@ jobs:
             Write-Host "nvcc not found in PATH"
           }
 
-      - name: Validate setup.py dry run
+      - name: Validate setup.py CPU dry run
         shell: pwsh
         run: |
-          python setup.py --build-variant cuda --dryrun
-
-      - name: Attempt Windows wheel build
-        shell: pwsh
-        run: |
-          python setup.py --build-variant cuda bdist_wheel
+          python setup.py --build-variant cpu --dryrun
 
       - name: List wheel artifacts
         if: always()

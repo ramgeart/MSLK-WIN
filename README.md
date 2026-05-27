@@ -49,7 +49,8 @@ pytest test/conv/conv_test.py
 ```
 
 ## **Build From Source**
-We only support building on Linux. See the release compatibility table above for supported versions of Python, CUDA, ROCm.
+The upstream build is Linux-oriented. This fork also tracks Windows CPU and CUDA
+wheel build support; see [Windows wheel builds](docs/windows_build.md).
 ```bash
 # Clone repo
 git clone https://github.com/meta-pytorch/MSLK

@@ -11,6 +11,7 @@ import logging
 import os
 import pprint
 import re
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -95,14 +96,14 @@ class MSLKBuild:
             "--nvml_lib_path",
             type=str,
             default=None,
-            help="Certain build targets require NVML (libnvidia-ml.so). If you installed"
+            help="Certain build targets require NVML (libnvidia-ml.so or nvml.lib). If you installed"
             " this in a custom location (through cudatoolkit-dev), provide the path here.",
         )
         parser.add_argument(
             "--nccl_lib_path",
             type=str,
             default=None,
-            help="NCCL (libnccl.so.2) filepath. This is required for building certain targets.",
+            help="NCCL (libnccl.so.2 or nccl.lib) filepath. This is required for building certain targets.",
         )
         parser.add_argument(
             "--build_fb_code",
@@ -400,8 +401,8 @@ class MSLKBuild:
 
         cmake_args.extend(
             [
-                f"-DCMAKE_C_FLAGS='{' '.join(cxx_flags)}'",
-                f"-DCMAKE_CXX_FLAGS='{' '.join(cxx_flags)}'",
+                f"-DCMAKE_C_FLAGS={' '.join(cxx_flags)}",
+                f"-DCMAKE_CXX_FLAGS={' '.join(cxx_flags)}",
             ]
         )
 
@@ -443,7 +444,8 @@ class CudaUtils:
         if not cuda_home:
             return False
 
-        nvcc_path = f"{cuda_home}/bin/nvcc"
+        nvcc_name = "nvcc.exe" if sys.platform == "win32" else "nvcc"
+        nvcc_path = os.path.join(cuda_home, "bin", nvcc_name)
         if not os.path.exists(nvcc_path):
             return False
 
@@ -464,9 +466,16 @@ class CudaUtils:
 
     @classmethod
     def find_cuda(cls, major: int, minor: int) -> Optional[str]:
-        cuda_home = os.environ.get("CUDA_BIN_PATH")
-        if cls.nvcc_ok(cuda_home, major, minor):
-            return cuda_home
+        candidate_env_vars = [
+            "CUDA_BIN_PATH",
+            "CUDA_HOME",
+            "CUDA_PATH",
+            f"CUDA_PATH_V{major}_{minor}",
+        ]
+        for env_var in candidate_env_vars:
+            cuda_home = os.environ.get(env_var)
+            if cls.nvcc_ok(cuda_home, major, minor):
+                return cuda_home
 
         cuda_nvcc = os.environ.get("CUDACXX")
 
@@ -475,27 +484,29 @@ class CudaUtils:
             if cls.nvcc_ok(cuda_home, major, minor):
                 return cuda_home
 
-        # Search standard installation location with version first
-        cuda_home = f"/usr/local/cuda-{major}.{minor}"
-        if cls.nvcc_ok(cuda_home, major, minor):
-            return cuda_home
+        # Search standard installation locations with version first.
+        candidate_cuda_homes = [
+            f"/usr/local/cuda-{major}.{minor}",
+            "/usr/local/cuda",
+        ]
+        if sys.platform == "win32":
+            # Windows CUDA installers default to this versioned directory.
+            candidate_cuda_homes.insert(
+                0,
+                os.path.join(
+                    os.environ.get("ProgramFiles", r"C:\Program Files"),
+                    "NVIDIA GPU Computing Toolkit",
+                    "CUDA",
+                    f"v{major}.{minor}",
+                ),
+            )
 
-        cuda_home = "/usr/local/cuda"
-        if cls.nvcc_ok(cuda_home, major, minor):
-            return cuda_home
+        for cuda_home in candidate_cuda_homes:
+            if cls.nvcc_ok(cuda_home, major, minor):
+                return cuda_home
 
-        try:
-            # Try to find nvcc with which
-            with open(os.devnull, "w") as devnull:
-                nvcc = (
-                    subprocess.check_output(["which", "nvcc"], stderr=devnull)
-                    .decode()
-                    .rstrip("\r\n")
-                )
-                cuda_home = os.path.dirname(os.path.dirname(nvcc))
-
-        except Exception:
-            cuda_home = None
+        nvcc = shutil.which("nvcc")
+        cuda_home = os.path.dirname(os.path.dirname(nvcc)) if nvcc else None
 
         if cls.nvcc_ok(cuda_home, major, minor):
             return cuda_home
@@ -518,7 +529,8 @@ class CudaUtils:
             if cuda_home:
                 print(f"[SETUP.PY] Using CUDA = {cuda_home}")
                 os.environ["CUDA_BIN_PATH"] = cuda_home
-                os.environ["CUDACXX"] = f"{cuda_home}/bin/nvcc"
+                nvcc_name = "nvcc.exe" if sys.platform == "win32" else "nvcc"
+                os.environ["CUDACXX"] = os.path.join(cuda_home, "bin", nvcc_name)
 
 
 class MSLKInstall(PipInstall):
@@ -551,15 +563,22 @@ class MSLKInstall(PipInstall):
         if cuda_version_declared != "None":
             cuda_version = cuda_version_declared.split(".")
             cuda_home = CudaUtils.find_cuda(int(cuda_version[0]), int(cuda_version[1]))
-
-            actual_cuda_version = (
-                subprocess.run(
-                    [f"{cuda_home}/bin/nvcc", "--version"],
-                    stdout=subprocess.PIPE,
-                )
-                .stdout.decode("utf-8")
-                .strip()
+            nvcc_name = "nvcc.exe" if sys.platform == "win32" else "nvcc"
+            nvcc_path = (
+                os.path.join(cuda_home, "bin", nvcc_name) if cuda_home else None
             )
+
+            if nvcc_path:
+                actual_cuda_version = (
+                    subprocess.run(
+                        [nvcc_path, "--version"],
+                        stdout=subprocess.PIPE,
+                    )
+                    .stdout.decode("utf-8")
+                    .strip()
+                )
+            else:
+                actual_cuda_version = "nvcc not found"
 
             table.extend(
                 [
