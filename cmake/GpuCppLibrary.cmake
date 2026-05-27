@@ -289,6 +289,11 @@ function(gpu_cpp_library)
         ${CUDA_DRIVER_LIBRARIES}
         ${args_DEPS})
 
+    if(WIN32)
+        list(APPEND library_dependencies ${Python_LIBRARIES})
+        target_link_directories(${lib_name} PRIVATE ${Python_LIBRARY_DIRS})
+    endif()
+
     if(MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_CUDA)
         list(APPEND library_dependencies
             CUDA::cublas
