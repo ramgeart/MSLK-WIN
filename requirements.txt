@@ -27,7 +27,7 @@ scikit-build
 setuptools
 setuptools_git_versioning>=3.0.0
 tabulate
-patchelf
+patchelf; sys_platform != "win32"
 fairscale
 seaborn
 pandas

@@ -61,7 +61,7 @@ function(prepare_target_sources)
         set_source_files_properties(${${args_PREFIX}_sources_cpp}
             PROPERTIES COMPILE_OPTIONS
             "${AVX2_FLAGS}")
-    else()
+    elseif(NOT MSVC)
         set_source_files_properties(${${args_PREFIX}_sources_cpp}
             PROPERTIES COMPILE_OPTIONS
             "-fopenmp")
@@ -289,7 +289,12 @@ function(gpu_cpp_library)
         ${CUDA_DRIVER_LIBRARIES}
         ${args_DEPS})
 
-    if(NOT MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_ROCM)
+    if(WIN32)
+        list(APPEND library_dependencies ${Python_LIBRARIES})
+        target_link_directories(${lib_name} PRIVATE ${Python_LIBRARY_DIRS})
+    endif()
+
+    if(MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_CUDA)
         list(APPEND library_dependencies
             CUDA::cublas
             CUDA::cublasLt)
@@ -324,12 +329,14 @@ function(gpu_cpp_library)
     ############################################################################
 
     # Set the additional compilation flags
-    target_compile_options(${lib_name} PRIVATE
-        ${args_CC_FLAGS}
-        # Silence compiler warnings (in asmjit)
-        -Wno-deprecated-enum-enum-conversion
-        -Wno-deprecated-declarations
-        -Wno-unused-command-line-argument)
+    target_compile_options(${lib_name} PRIVATE ${args_CC_FLAGS})
+    if(NOT MSVC)
+        target_compile_options(${lib_name} PRIVATE
+            # Silence compiler warnings (in asmjit)
+            -Wno-deprecated-enum-enum-conversion
+            -Wno-deprecated-declarations
+            -Wno-unused-command-line-argument)
+    endif()
 
     ############################################################################
     # Post-Build Steps
@@ -342,14 +349,16 @@ function(gpu_cpp_library)
         set(set_rpath_to_origin 1)
     endif()
 
-    # Add a post-build step to remove errant RPATHs from the .SO
-    add_custom_target(${lib_name}_postbuild ALL
-        DEPENDS
-        WORKING_DIRECTORY ${OUTPUT_DIR}
-        COMMAND bash ${MSLK}/ci/scripts/mslk_postbuild.bash $<TARGET_FILE:${lib_name}> ${set_rpath_to_origin})
+    if(NOT WIN32)
+        # Add a post-build step to remove errant RPATHs from the .SO.
+        add_custom_target(${lib_name}_postbuild ALL
+            DEPENDS
+            WORKING_DIRECTORY ${OUTPUT_DIR}
+            COMMAND bash ${MSLK}/ci/scripts/mslk_postbuild.bash $<TARGET_FILE:${lib_name}> ${set_rpath_to_origin})
 
-    # Set the post-build steps to run AFTER the build completes
-    add_dependencies(${lib_name}_postbuild ${lib_name})
+        # Set the post-build steps to run AFTER the build completes
+        add_dependencies(${lib_name}_postbuild ${lib_name})
+    endif()
 
     ############################################################################
     # Set the Output Variable(s)

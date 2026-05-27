@@ -8,48 +8,7 @@
 name: MSLK ROCm CI
 
 on:
-  # PR Trigger (enabled for regression checks and debugging)
-  # Only run on PRs that touch ROCm/AMD-related files
-  #
-  pull_request:
-    branches:
-      - main
-    paths:
-      # Workflow and CI scripts
-      - '.github/scripts/generate_ci_matrix.py'
-      - '.github/workflows/mslk_ci_rocm.yml'
-      - '.github/workflows/_mslk_rocm_test.yml'
-      - 'ci/scripts/utils_rocm.bash'
-      # CMake ROCm/HIP configuration
-      - 'cmake/Hip.cmake'
-      - 'cmake/RocmSetup.cmake'
-      # External dependencies
-      - 'external/hipify_torch.submodule.txt'
-      - 'external/composable_kernel.submodule.txt'
-      # Python ROCm utilities
-      - 'mslk/testing/rocm.py'
-      # HIP source files (AMD GPU kernels)
-      - '**/*.hip'
-      # Any file/folder with 'ck' in the path (Composable Kernel)
-      - '**/ck/**'
-      - '**/ck_*/**'
-
-  # Push Trigger (enable to catch errors coming out of multiple merges)
-  #
-  push:
-    branches:
-      - main
-
-  # Cron Trigger (UTC)
-  #
-  # Based on the Conda page for PyTorch-nightly, the GPU nightly releases appear
-  # around 02:30 PST every day (roughly 2 hours after the CPU releases)
-  #
-  schedule:
-    - cron:  '45 12 * * *'
-
-  # Manual Trigger
-  #
+  # Disabled automatic ROCm CI triggers for the Windows-focused MSLK-WIN fork.
   workflow_dispatch:
     inputs:
       pytorch-channel-version:

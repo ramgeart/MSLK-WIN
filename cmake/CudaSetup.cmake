@@ -8,7 +8,7 @@
 # CUDA Setup
 ################################################################################
 
-if(NOT MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_ROCM)
+if(MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_CUDA)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
@@ -26,14 +26,19 @@ BLOCK_PRINT(
 )
 
 # Set NVML_LIB_PATH if provided, or detect the default lib path
-if(NOT NVML_LIB_PATH)
-  set(DEFAULT_NVML_LIB_PATH
-      "${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/libnvidia-ml.so")
+if(NOT NVML_LIB_PATH AND MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_CUDA)
+  if(WIN32)
+    set(DEFAULT_NVML_LIB_PATH
+        "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/nvml.lib")
+  else()
+    set(DEFAULT_NVML_LIB_PATH
+        "${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/libnvidia-ml.so")
+  endif()
 
   if(EXISTS ${DEFAULT_NVML_LIB_PATH})
     message(STATUS "Setting NVML_LIB_PATH: \
-      ${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/libnvidia-ml.so")
-    set(NVML_LIB_PATH "${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/libnvidia-ml.so")
+      ${DEFAULT_NVML_LIB_PATH}")
+    set(NVML_LIB_PATH "${DEFAULT_NVML_LIB_PATH}")
   endif()
 endif()
 

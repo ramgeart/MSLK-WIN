@@ -1,0 +1,123 @@
+name: Windows Build Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-variant:
+        description: Wheel variant to build
+        type: choice
+        required: true
+        options: [ "both", "cpu", "cuda" ]
+        default: "both"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.build-variant }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-wheel:
+    if: ${{ inputs.build-variant == 'both' || inputs.build-variant == 'cpu' }}
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python build tooling
+        run: python -m pip install --upgrade pip setuptools wheel build
+
+      - name: Install PyTorch CPU
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install repository requirements
+        run: python -m pip install -r requirements.txt
+
+      - name: Validate build tools
+        run: |
+          python --version
+          python -m pip --version
+          cmake --version
+          ninja --version
+          python -c "import torch; print('torch:', torch.__version__); print('torch cuda:', torch.version.cuda)"
+
+      - name: CPU dry run
+        run: python setup.py --build-variant cpu --dryrun
+
+      - name: Build CPU wheel
+        run: python setup.py --build-variant cpu bdist_wheel
+
+      - name: Upload CPU wheel
+        if: ${{ always() && hashFiles('dist/*.whl') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mslk-windows-cpu-wheel
+          path: dist/*.whl
+
+  cuda-wheel:
+    if: ${{ inputs.build-variant == 'both' || inputs.build-variant == 'cuda' }}
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python build tooling
+        run: python -m pip install --upgrade pip setuptools wheel build
+
+      - name: Install PyTorch CUDA
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
+
+      - name: Install repository requirements
+        run: python -m pip install -r requirements.txt
+
+      - name: Validate build tools and CUDA
+        run: |
+          python --version
+          python -m pip --version
+          cmake --version
+          ninja --version
+          python -c "import torch; print('torch:', torch.__version__); print('torch cuda:', torch.version.cuda)"
+          $nvcc = Get-Command nvcc -ErrorAction SilentlyContinue
+          if ($nvcc) {
+            nvcc --version
+          } else {
+            Write-Warning "nvcc was not found on PATH. CUDA wheel build is expected to fail until the CUDA Toolkit is installed on the runner."
+          }
+
+      - name: CUDA dry run
+        run: python setup.py --build-variant cuda --dryrun
+
+      - name: Build CUDA wheel
+        run: python setup.py --build-variant cuda bdist_wheel
+
+      - name: Upload CUDA wheel
+        if: ${{ always() && hashFiles('dist/*.whl') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mslk-windows-cuda-wheel
+          path: dist/*.whl

@@ -106,11 +106,16 @@ project(
 # AVX Flags Setup - must be set AFTER project declaration
 include(${CMAKEMODULES}/FindAVX.cmake)
 
+# Python headers are required by C++ sources that include torch/extension.h.
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+
 # PyTorch Dependencies Setup
 include(${CMAKEMODULES}/PyTorchSetup.cmake)
 
-# CUDA Setup
-include(${CMAKEMODULES}/CudaSetup.cmake)
+if(MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_CUDA)
+  # CUDA Setup
+  include(${CMAKEMODULES}/CudaSetup.cmake)
+endif()
 
 # ROCm and HIPify Setup
 include(${CMAKEMODULES}/RocmSetup.cmake)
@@ -129,6 +134,7 @@ set(mslk_include_directories
   ${MSLK}/csrc/attention/ck/fmha/hip_fmha
   # PyTorch
   ${TORCH_INCLUDE_DIRS}
+  ${Python_INCLUDE_DIRS}
   # Third-party
   ${THIRDPARTY}/cutlass/include
   ${THIRDPARTY}/cutlass/tools/util/include
@@ -173,12 +179,6 @@ endif()
 ################################################################################
 # Build Targets
 ################################################################################
-
-if(MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_CPU)
-  message(FATAL_ERROR
-    "Currently unsupported (target, variant) combination:
-    (${MSLK_BUILD_TARGET}, ${MSLK_BUILD_VARIANT})")
-endif()
 
 if(MSLK_BUILD_TARGET STREQUAL BUILD_TARGET_DEFAULT)
   # Build MSLK

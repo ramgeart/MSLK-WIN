@@ -8,12 +8,19 @@
 # Target Sources
 ################################################################################
 
-glob_files_nohip(mslk_cpp_source_files_cpu
-  csrc/attention/cuda/cutlass_blackwell_fmha/blackwell_*.cpp
-  csrc/conv/*.cpp
-  csrc/gemm/*.cpp
-  csrc/moe/*.cpp
-  csrc/attention/ck/fmha/*.cpp)
+if(MSLK_BUILD_VARIANT STREQUAL BUILD_VARIANT_CPU)
+  # Windows CPU wheels are used as a packaging validation target first. The
+  # current C++ registrations reference CUDA implementations, so build the
+  # placeholder library until CPU implementations are split from CUDA ops.
+  set(mslk_cpp_source_files_cpu)
+else()
+  glob_files_nohip(mslk_cpp_source_files_cpu
+    csrc/attention/cuda/cutlass_blackwell_fmha/blackwell_*.cpp
+    csrc/conv/*.cpp
+    csrc/gemm/*.cpp
+    csrc/moe/*.cpp
+    csrc/attention/ck/fmha/*.cpp)
+endif()
 
 glob_files_nohip(mslk_cpp_source_files_gpu
   csrc/moe/*.cu)
