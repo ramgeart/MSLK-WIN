@@ -7,7 +7,7 @@ jobs:
   copilot-setup-steps:
     # Para build Windows real necesitas un runner Windows.
     # Si todavía no tienes runner, esta línea fallará hasta que configures uno.
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: windows-latest
 
     permissions:
       contents: read
