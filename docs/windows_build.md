@@ -35,3 +35,14 @@ python setup.py --build-variant cuda bdist_wheel
 
 If the CUDA build fails before compiling sources, first confirm that the CUDA
 Toolkit version reported by `nvcc --version` matches `torch.version.cuda`.
+
+## Current CUDA CI blocker
+
+`python setup.py --build-variant cuda --dryrun` works, but
+`python setup.py --build-variant cuda bdist_wheel` requires a CUDA Toolkit on
+the Windows runner. During CMake project configuration, `CMakeLists.txt` enables
+the CUDA language for the CUDA variant and CMake fails with `Failed to find
+nvcc. Compiler requires the CUDA toolkit. Please set the CUDAToolkit_ROOT
+variable.` The next step is to install a CUDA Toolkit matching the selected
+PyTorch CUDA wheel, or run the workflow on a Windows runner where `nvcc` is
+available and `CUDAToolkit_ROOT`/`CUDA_PATH` points at that installation.
